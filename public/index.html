@@ -1,371 +1,221 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>CloudVault</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloudVault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f5f3e8;
+    --ink: #0d1117;
+    --yellow: #fbbf24;
+    --grey: #dedbd0;
+    --muted: #5d5f63;
+    --line: #cfccbf;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--cream); color: var(--ink);
+    font-family: 'Inter', system-ui, Arial, sans-serif; font-weight: 400; line-height: 1.5;
+    position: relative; overflow-x: hidden;
+  }
+  /* soft background shapes */
+  .shape { position: fixed; border-radius: 50%; z-index: 0; pointer-events: none; }
+  .shape.y1 { width: 420px; height: 420px; background: var(--yellow); top: -210px; right: -140px; opacity: .9; }
+  .shape.g1 { width: 520px; height: 520px; background: var(--grey); bottom: -300px; left: -200px; opacity: .6; }
+  .shape.y2 { width: 160px; height: 160px; background: var(--yellow); bottom: 40px; right: 6%; opacity: .55; }
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 30px auto;
-            padding: 0 16px;
-        }
+  .wrap { position: relative; z-index: 1; max-width: 920px; margin: 0 auto; padding: 28px 20px 80px; }
 
-        input, button {
-            padding: 8px;
-            margin: 4px;
-        }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 16px; }
+  .brand b { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .brand span { border-left: 1px solid var(--ink); padding-left: 16px; font-size: .78rem; color: var(--muted); line-height: 1.35; }
+  nav { display: flex; gap: 28px; }
+  nav a { font-size: .85rem; color: var(--ink); text-decoration: none; padding-top: 8px; border-top: 2px solid var(--yellow); }
+  nav a:hover { border-top-color: var(--ink); }
 
-        li {
-            margin: 6px 0;
-        }
+  /* headline */
+  h1.hero { font-size: clamp(2.6rem, 8vw, 5rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1; margin: 56px 0 0; }
+  .mark { display: inline-block; background: var(--yellow); padding: 0 .12em; margin-top: 6px; }
+  .tagline { margin: 18px 0 0; font-size: 1.05rem; font-weight: 300; letter-spacing: .02em; color: var(--ink); }
+  .arrow { display: block; width: 190px; height: 90px; margin: 4px 0 0 40px; }
 
-        .box {
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 16px;
-        }
-    </style>
+  /* panels */
+  .panel { background: rgba(255,255,255,.55); border: 1px solid var(--line); border-radius: 14px; padding: 22px; margin-top: 22px; backdrop-filter: blur(2px); }
+  .panel h3 { margin: 0 0 14px; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
+
+  input[type=text], input[type=password], input:not([type]) {
+    font: inherit; padding: 11px 14px; border: 1px solid var(--ink); border-radius: 8px; background: #fff; color: var(--ink);
+  }
+  input[type=file] { font: inherit; font-size: .9rem; max-width: 100%; }
+  input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+
+  button {
+    font: inherit; font-weight: 500; font-size: .9rem; cursor: pointer; padding: 10px 18px;
+    border-radius: 999px; border: 1px solid var(--ink); background: transparent; color: var(--ink);
+    transition: background .15s, color .15s;
+  }
+  button:hover { background: var(--ink); color: var(--cream); }
+  button.primary { background: var(--yellow); border-color: var(--yellow); font-weight: 800; }
+  button.primary:hover { background: var(--ink); border-color: var(--ink); color: var(--yellow); }
+  button.danger { border-color: #b3261e; color: #b3261e; }
+  button.danger:hover { background: #b3261e; color: #fff; }
+  button.small { padding: 6px 13px; font-size: .8rem; }
+
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .row input { flex: 1 1 200px; }
+  #msg { margin: 12px 0 0; min-height: 1.4em; font-size: .9rem; color: #b3261e; }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+  li.file { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 13px 0; border-top: 1px solid var(--line); }
+  li.file:first-child { border-top: 0; padding-top: 0; }
+  .fname { font-weight: 500; word-break: break-all; }
+  .fmeta { color: var(--muted); font-size: .8rem; }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  li.log { display: flex; gap: 14px; padding: 7px 0; border-top: 1px solid var(--line); font-size: .85rem; }
+  li.log:first-child { border-top: 0; padding-top: 0; }
+  li.log time { color: var(--muted); white-space: nowrap; min-width: 150px; }
+  .empty { color: var(--muted); font-size: .9rem; }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 40px; }
+  .toolbar h2 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.8rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; }
+
+  @media (max-width: 600px) { nav { display: none; } li.log { flex-direction: column; gap: 0; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
 </head>
-
 <body>
+<div class="shape y1"></div><div class="shape g1"></div><div class="shape y2"></div>
 
-    <h1>CloudVault</h1>
+<div class="wrap">
+  <header>
+    <div class="brand"><b>CloudVault</b><span>Secure file storage<br>and sharing</span></div>
+    <nav><a href="#files">My files</a><a href="#shared">Shared</a><a href="#activity">Activity</a></nav>
+  </header>
 
-    <div id="loginBox" class="box">
-        <input id="email" type="email" placeholder="Email">
-        <input id="password" type="password" placeholder="Password">
-
-        <button onclick="auth('login')">Login</button>
+  <!-- login view -->
+  <div id="loginBox">
+    <h1 class="hero">Your files,<br><span class="mark">kept private.</span></h1>
+    <p class="tagline">Upload, share and revoke access from one place.</p>
+    <svg class="arrow" viewBox="0 0 190 90" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M6 84 C 40 70, 55 30, 90 52 S 140 40, 176 14"/><path d="M158 12 L178 12 L176 32"/>
+    </svg>
+    <div class="panel">
+      <div class="row">
+        <input id="email" placeholder="Email" autocomplete="email">
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" onclick="auth('login')">Log in</button>
         <button onclick="auth('signup')">Sign up</button>
+      </div>
+      <p id="msg" role="alert"></p>
+    </div>
+  </div>
 
-        <p id="msg"></p>
+  <!-- app view -->
+  <div id="app" style="display:none">
+    <div class="toolbar">
+      <h2>Your <span class="mark">vault.</span></h2>
+      <button onclick="logout()">Log out</button>
     </div>
 
-    <div id="app" style="display:none">
-
-        <div class="box">
-            <input type="file" id="file">
-            <input id="folder" placeholder="Folder (e.g. /notes)" value="/">
-
-            <button onclick="uploadFile()">Upload</button>
-            <button onclick="logout()">Logout</button>
-        </div>
-
-        <div class="box">
-            <h3>My files</h3>
-            <ul id="mine"></ul>
-        </div>
-
-        <div class="box">
-            <h3>Shared with me</h3>
-            <ul id="shared"></ul>
-        </div>
-
-        <div class="box">
-            <h3>Activity log</h3>
-            <ul id="logs"></ul>
-        </div>
-
+    <div class="panel">
+      <div class="row">
+        <input type="file" id="file">
+        <input id="folder" placeholder="Folder (e.g. /notes)" value="/">
+        <button class="primary" onclick="uploadFile()">Upload</button>
+      </div>
     </div>
 
-    <script>
-        let token = localStorage.getItem('token');
-
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        const loginBox = document.getElementById('loginBox');
-        const app = document.getElementById('app');
-        const msg = document.getElementById('msg');
-        const fileInput = document.getElementById('file');
-        const folderInput = document.getElementById('folder');
-        const mine = document.getElementById('mine');
-        const shared = document.getElementById('shared');
-        const logs = document.getElementById('logs');
-
-        const H = () => ({
-            Authorization: 'Bearer ' + token
-        });
-
-        const J = () => ({
-            ...H(),
-            'Content-Type': 'application/json'
-        });
-
-        // ---------- authentication ----------
-
-        async function auth(kind) {
-            try {
-                const body = JSON.stringify({
-                    email: emailInput.value,
-                    password: passwordInput.value
-                });
-
-                const r = await fetch('/api/' + kind, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body
-                });
-
-                const d = await r.json();
-
-                if (!r.ok) {
-                    msg.textContent = d.error || 'Authentication failed';
-                    return;
-                }
-
-                if (d.token) {
-                    token = d.token;
-                    localStorage.setItem('token', token);
-                    show();
-                } else {
-                    msg.textContent = d.error || 'Signup successful. Now log in.';
-                }
-            } catch (err) {
-                console.error(err);
-                msg.textContent = 'Unable to connect to server.';
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem('token');
-            location.reload();
-        }
-
-        // ---------- display files ----------
-
-        async function show() {
-            loginBox.style.display = 'none';
-            app.style.display = 'block';
-
-            try {
-                const response = await fetch('/api/files', {
-                    headers: H()
-                });
-
-                if (response.status === 401) {
-                    logout();
-                    return;
-                }
-
-                const d = await response.json();
-
-                if (!response.ok) {
-                    alert(d.error || 'Could not load files');
-                    return;
-                }
-
-                mine.innerHTML = d.mine.map(f => `
-                    <li>
-                        ${f.folder}${f.name} (${f.size} B)
-
-                        <button onclick="dl(${f.id})">Download</button>
-                        <button onclick="share(${f.id})">Share</button>
-                        <button onclick="revoke(${f.id})">Revoke</button>
-                        <button onclick="del(${f.id})">Delete</button>
-                    </li>
-                `).join('');
-
-                shared.innerHTML = d.shared.map(f => `
-                    <li>
-                        ${f.name}
-
-                        <button onclick="dl(${f.id})">
-                            ${f.can_download ? 'Download' : 'View'}
-                        </button>
-                    </li>
-                `).join('');
-
-                const logResponse = await fetch('/api/logs', {
-                    headers: H()
-                });
-
-                const l = await logResponse.json();
-
-                logs.innerHTML = l.map(x => `
-                    <li>
-                        ${new Date(x.created_at).toLocaleString()}
-                        - ${x.action}: ${x.detail}
-                    </li>
-                `).join('');
-
-            } catch (err) {
-                console.error(err);
-                alert('Unable to load CloudVault data.');
-            }
-        }
-
-        // ---------- upload file ----------
-
-        async function uploadFile() {
-            if (!fileInput.files.length) {
-                alert('Please select a file first.');
-                return;
-            }
-
-            const fd = new FormData();
-
-            fd.append('file', fileInput.files[0]);
-            fd.append('folder', folderInput.value);
-
-            try {
-                const r = await fetch('/api/files', {
-                    method: 'POST',
-                    headers: H(),
-                    body: fd
-                });
-
-                const d = await r.json();
-
-                if (!r.ok) {
-                    alert(d.error || 'Upload failed');
-                    return;
-                }
-
-                alert('File uploaded successfully!');
-                fileInput.value = '';
-                show();
-
-            } catch (err) {
-                console.error(err);
-                alert('Upload failed.');
-            }
-        }
-
-        // ---------- download file ----------
-
-        async function dl(id) {
-            try {
-                const r = await fetch(`/api/files/${id}/download`, {
-                    headers: H()
-                });
-
-                const d = await r.json();
-
-                if (d.url) {
-                    window.open(d.url, '_blank');
-                } else {
-                    alert(d.error || 'Download failed');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Unable to download file.');
-            }
-        }
-
-        // ---------- share file ----------
-
-        async function share(id) {
-            const e = prompt(
-                'Enter user email to share with (leave empty for a secure link):'
-            );
-
-            if (e === null) return;
-
-            const canDownload = confirm(
-                'OK = allow download, Cancel = view only'
-            );
-
-            try {
-                const r = await fetch(`/api/files/${id}/share`, {
-                    method: 'POST',
-                    headers: J(),
-                    body: JSON.stringify({
-                        email: e.trim() || undefined,
-                        canDownload
-                    })
-                });
-
-                const d = await r.json();
-
-                if (!r.ok) {
-                    alert(d.error || 'Sharing failed');
-                    return;
-                }
-
-                if (d.link) {
-                    alert('Share link: ' + location.origin + d.link);
-                } else {
-                    alert('File shared successfully!');
-                }
-
-                show();
-
-            } catch (err) {
-                console.error(err);
-                alert('Sharing failed.');
-            }
-        }
-
-        // ---------- revoke access ----------
-
-        async function revoke(id) {
-            if (!confirm('Are you sure you want to revoke sharing?')) {
-                return;
-            }
-
-            try {
-                const r = await fetch(`/api/files/${id}/revoke`, {
-                    method: 'POST',
-                    headers: H()
-                });
-
-                const d = await r.json();
-
-                if (!r.ok) {
-                    alert(d.error || 'Revoke failed');
-                    return;
-                }
-
-                show();
-
-            } catch (err) {
-                console.error(err);
-                alert('Could not revoke access.');
-            }
-        }
-
-        // ---------- delete file ----------
-
-        async function del(id) {
-            if (!confirm('Are you sure you want to delete this file?')) {
-                return;
-            }
-
-            try {
-                const r = await fetch(`/api/files/${id}`, {
-                    method: 'DELETE',
-                    headers: H()
-                });
-
-                const d = await r.json();
-
-                if (!r.ok) {
-                    alert(d.error || 'Delete failed');
-                    return;
-                }
-
-                show();
-
-            } catch (err) {
-                console.error(err);
-                alert('Could not delete file.');
-            }
-        }
-
-        // ---------- initial load ----------
-
-        if (token) {
-            show();
-        }
-
-    </script>
-
+    <div class="panel" id="files"><h3>My files</h3><ul id="mine"></ul></div>
+    <div class="panel" id="shared"><h3>Shared with me</h3><ul id="sharedList"></ul></div>
+    <div class="panel" id="activity"><h3>Activity log</h3><ul id="logs"></ul></div>
+  </div>
+</div>
+
+<script>
+let token = localStorage.getItem('token');
+const H = () => ({ Authorization: 'Bearer ' + token });
+const J = () => ({ ...H(), 'Content-Type': 'application/json' });
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtSize = b => b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(1) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
+
+async function auth(kind) {
+  const body = JSON.stringify({ email: email.value, password: password.value });
+  const r = await fetch('/api/' + kind, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+  const d = await r.json();
+  if (d.token) { token = d.token; localStorage.setItem('token', token); show(); }
+  else { msg.style.color = d.error ? '#b3261e' : '#1a7f37'; msg.textContent = d.error || 'Account created. Now log in.'; }
+}
+
+function logout() { localStorage.removeItem('token'); location.reload(); }
+
+async function show() {
+  const d = await (await fetch('/api/files', { headers: H() })).json();
+  if (!d.mine) { logout(); return; }
+  loginBox.style.display = 'none'; app.style.display = 'block';
+
+  mine.innerHTML = d.mine.length ? d.mine.map(f => `<li class="file">
+    <div><div class="fname">${esc(f.folder)}${esc(f.name)}</div><div class="fmeta">${fmtSize(f.size)}</div></div>
+    <div class="actions">
+      <button class="small" onclick="dl(${f.id})">Download</button>
+      <button class="small" onclick="share(${f.id})">Share</button>
+      <button class="small" onclick="revoke(${f.id})">Revoke</button>
+      <button class="small danger" onclick="del(${f.id})">Delete</button>
+    </div></li>`).join('') : '<li class="empty">No files yet. Choose a file above and upload it.</li>';
+
+  sharedList.innerHTML = d.shared.length ? d.shared.map(f => `<li class="file">
+    <div class="fname">${esc(f.name)}</div>
+    <div class="actions"><button class="small" onclick="dl(${f.id})">${f.can_download ? 'Download' : 'View'}</button></div></li>`).join('')
+    : '<li class="empty">Nothing has been shared with you.</li>';
+
+  const l = await (await fetch('/api/logs', { headers: H() })).json();
+  logs.innerHTML = l.map(x => `<li class="log"><time>${new Date(x.created_at).toLocaleString()}</time><span><b>${esc(x.action)}</b> ${esc(x.detail)}</span></li>`).join('');
+}
+
+async function uploadFile() {
+  if (!file.files[0]) { alert('Choose a file first'); return; }
+  const fd = new FormData();
+  fd.append('file', file.files[0]);
+  fd.append('folder', folder.value || '/');
+  try {
+    const r = await fetch('/api/files', { method: 'POST', headers: H(), body: fd });
+    const d = await r.json();
+    if (!r.ok) alert(d.error || 'Upload failed');
+  } catch (e) {
+    alert('Server not reachable. Is node server.js still running?');
+  }
+  file.value = '';
+  show();
+}
+
+async function dl(id) {
+  const d = await (await fetch(`/api/files/${id}/download`, { headers: H() })).json();
+  if (d.url) window.open(d.url); else alert(d.error);
+}
+
+async function share(id) {
+  const e = prompt('Enter user email to share with (leave empty for a secure link):');
+  const canDownload = confirm('OK = allow download, Cancel = view only');
+  const r = await fetch(`/api/files/${id}/share`, { method: 'POST', headers: J(), body: JSON.stringify({ email: e || undefined, canDownload }) });
+  const d = await r.json();
+  alert(d.link ? location.origin + d.link : d.error || 'Shared');
+  show();
+}
+
+async function revoke(id) { await fetch(`/api/files/${id}/revoke`, { method: 'POST', headers: H() }); show(); }
+async function del(id) {
+  if (!confirm('Delete this file permanently?')) return;
+  await fetch(`/api/files/${id}`, { method: 'DELETE', headers: H() }); show();
+}
+
+if (token) show();
+</script>
 </body>
 </html>
