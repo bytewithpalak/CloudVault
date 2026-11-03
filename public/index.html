@@ -1,0 +1,371 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CloudVault</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 16px;
+        }
+
+        input, button {
+            padding: 8px;
+            margin: 4px;
+        }
+
+        li {
+            margin: 6px 0;
+        }
+
+        .box {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>CloudVault</h1>
+
+    <div id="loginBox" class="box">
+        <input id="email" type="email" placeholder="Email">
+        <input id="password" type="password" placeholder="Password">
+
+        <button onclick="auth('login')">Login</button>
+        <button onclick="auth('signup')">Sign up</button>
+
+        <p id="msg"></p>
+    </div>
+
+    <div id="app" style="display:none">
+
+        <div class="box">
+            <input type="file" id="file">
+            <input id="folder" placeholder="Folder (e.g. /notes)" value="/">
+
+            <button onclick="uploadFile()">Upload</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+
+        <div class="box">
+            <h3>My files</h3>
+            <ul id="mine"></ul>
+        </div>
+
+        <div class="box">
+            <h3>Shared with me</h3>
+            <ul id="shared"></ul>
+        </div>
+
+        <div class="box">
+            <h3>Activity log</h3>
+            <ul id="logs"></ul>
+        </div>
+
+    </div>
+
+    <script>
+        let token = localStorage.getItem('token');
+
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const loginBox = document.getElementById('loginBox');
+        const app = document.getElementById('app');
+        const msg = document.getElementById('msg');
+        const fileInput = document.getElementById('file');
+        const folderInput = document.getElementById('folder');
+        const mine = document.getElementById('mine');
+        const shared = document.getElementById('shared');
+        const logs = document.getElementById('logs');
+
+        const H = () => ({
+            Authorization: 'Bearer ' + token
+        });
+
+        const J = () => ({
+            ...H(),
+            'Content-Type': 'application/json'
+        });
+
+        // ---------- authentication ----------
+
+        async function auth(kind) {
+            try {
+                const body = JSON.stringify({
+                    email: emailInput.value,
+                    password: passwordInput.value
+                });
+
+                const r = await fetch('/api/' + kind, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body
+                });
+
+                const d = await r.json();
+
+                if (!r.ok) {
+                    msg.textContent = d.error || 'Authentication failed';
+                    return;
+                }
+
+                if (d.token) {
+                    token = d.token;
+                    localStorage.setItem('token', token);
+                    show();
+                } else {
+                    msg.textContent = d.error || 'Signup successful. Now log in.';
+                }
+            } catch (err) {
+                console.error(err);
+                msg.textContent = 'Unable to connect to server.';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            location.reload();
+        }
+
+        // ---------- display files ----------
+
+        async function show() {
+            loginBox.style.display = 'none';
+            app.style.display = 'block';
+
+            try {
+                const response = await fetch('/api/files', {
+                    headers: H()
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                const d = await response.json();
+
+                if (!response.ok) {
+                    alert(d.error || 'Could not load files');
+                    return;
+                }
+
+                mine.innerHTML = d.mine.map(f => `
+                    <li>
+                        ${f.folder}${f.name} (${f.size} B)
+
+                        <button onclick="dl(${f.id})">Download</button>
+                        <button onclick="share(${f.id})">Share</button>
+                        <button onclick="revoke(${f.id})">Revoke</button>
+                        <button onclick="del(${f.id})">Delete</button>
+                    </li>
+                `).join('');
+
+                shared.innerHTML = d.shared.map(f => `
+                    <li>
+                        ${f.name}
+
+                        <button onclick="dl(${f.id})">
+                            ${f.can_download ? 'Download' : 'View'}
+                        </button>
+                    </li>
+                `).join('');
+
+                const logResponse = await fetch('/api/logs', {
+                    headers: H()
+                });
+
+                const l = await logResponse.json();
+
+                logs.innerHTML = l.map(x => `
+                    <li>
+                        ${new Date(x.created_at).toLocaleString()}
+                        - ${x.action}: ${x.detail}
+                    </li>
+                `).join('');
+
+            } catch (err) {
+                console.error(err);
+                alert('Unable to load CloudVault data.');
+            }
+        }
+
+        // ---------- upload file ----------
+
+        async function uploadFile() {
+            if (!fileInput.files.length) {
+                alert('Please select a file first.');
+                return;
+            }
+
+            const fd = new FormData();
+
+            fd.append('file', fileInput.files[0]);
+            fd.append('folder', folderInput.value);
+
+            try {
+                const r = await fetch('/api/files', {
+                    method: 'POST',
+                    headers: H(),
+                    body: fd
+                });
+
+                const d = await r.json();
+
+                if (!r.ok) {
+                    alert(d.error || 'Upload failed');
+                    return;
+                }
+
+                alert('File uploaded successfully!');
+                fileInput.value = '';
+                show();
+
+            } catch (err) {
+                console.error(err);
+                alert('Upload failed.');
+            }
+        }
+
+        // ---------- download file ----------
+
+        async function dl(id) {
+            try {
+                const r = await fetch(`/api/files/${id}/download`, {
+                    headers: H()
+                });
+
+                const d = await r.json();
+
+                if (d.url) {
+                    window.open(d.url, '_blank');
+                } else {
+                    alert(d.error || 'Download failed');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Unable to download file.');
+            }
+        }
+
+        // ---------- share file ----------
+
+        async function share(id) {
+            const e = prompt(
+                'Enter user email to share with (leave empty for a secure link):'
+            );
+
+            if (e === null) return;
+
+            const canDownload = confirm(
+                'OK = allow download, Cancel = view only'
+            );
+
+            try {
+                const r = await fetch(`/api/files/${id}/share`, {
+                    method: 'POST',
+                    headers: J(),
+                    body: JSON.stringify({
+                        email: e.trim() || undefined,
+                        canDownload
+                    })
+                });
+
+                const d = await r.json();
+
+                if (!r.ok) {
+                    alert(d.error || 'Sharing failed');
+                    return;
+                }
+
+                if (d.link) {
+                    alert('Share link: ' + location.origin + d.link);
+                } else {
+                    alert('File shared successfully!');
+                }
+
+                show();
+
+            } catch (err) {
+                console.error(err);
+                alert('Sharing failed.');
+            }
+        }
+
+        // ---------- revoke access ----------
+
+        async function revoke(id) {
+            if (!confirm('Are you sure you want to revoke sharing?')) {
+                return;
+            }
+
+            try {
+                const r = await fetch(`/api/files/${id}/revoke`, {
+                    method: 'POST',
+                    headers: H()
+                });
+
+                const d = await r.json();
+
+                if (!r.ok) {
+                    alert(d.error || 'Revoke failed');
+                    return;
+                }
+
+                show();
+
+            } catch (err) {
+                console.error(err);
+                alert('Could not revoke access.');
+            }
+        }
+
+        // ---------- delete file ----------
+
+        async function del(id) {
+            if (!confirm('Are you sure you want to delete this file?')) {
+                return;
+            }
+
+            try {
+                const r = await fetch(`/api/files/${id}`, {
+                    method: 'DELETE',
+                    headers: H()
+                });
+
+                const d = await r.json();
+
+                if (!r.ok) {
+                    alert(d.error || 'Delete failed');
+                    return;
+                }
+
+                show();
+
+            } catch (err) {
+                console.error(err);
+                alert('Could not delete file.');
+            }
+        }
+
+        // ---------- initial load ----------
+
+        if (token) {
+            show();
+        }
+
+    </script>
+
+</body>
+</html>
