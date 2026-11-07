@@ -2,7 +2,7 @@
 # ☁️ CloudVault
 ### Secure Cloud-Based File Storage and Sharing Platform
 
-# Live Website- http://cloudvaulthello.duckdns.org:3000/
+# Live Website- http://3.7.219.180:3000/
 
 
 <p align="center">
