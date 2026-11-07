@@ -1,163 +1,187 @@
+# CloudVault
 
-# ☁️ CloudVault
-### Secure Cloud-Based File Storage and Sharing Platform
+**A secure cloud-based file storage and sharing platform**, a Google Drive / Dropbox-style web app built on AWS.
 
-# Live Website- http://3.7.219.180:3000/
+Users can sign up, upload files into folders, download them, and share them with other users or through secure links, with view-only or download permissions that the owner can revoke at any time. Every important action is recorded in an activity log.
 
+> Course project for Cloud Computing, Thapar Institute of Engineering and Technology.
 
-<p align="center">
-  <strong>Store. Organise. Share. Securely.</strong>
-</p>
-
-<p align="center">
-  A secure and reliable cloud storage platform that allows users to upload, manage, access, and share files from anywhere.
-</p>
 
 ---
 
-## 📌 About The Project
+## Features
 
-**CloudVault** is a cloud-based file storage and sharing platform designed for **students, individuals, and small teams** who need a secure and convenient way to manage their digital files.
+- **Authentication:** sign-up and login with bcrypt-hashed passwords and JWT sessions (8-hour expiry)
+- **File management:** upload (up to 20 MB), download, delete, and folder names
+- **Sharing:** share a file with another user by email, or generate a secure link
+- **Permissions:** choose *view-only* or *download* for each share
+- **Revoke:** the owner can revoke all shares of a file; revoked users and links stop working immediately
+- **Private storage:** files live in a private, encrypted S3 bucket and are served only through short-lived pre-signed URLs (60 seconds)
+- **Activity log:** sign-ups, logins, failed logins, uploads, downloads, views, shares, revokes and deletes are stored in the database and printed as JSON lines for log shipping
+- **Health check:** `GET /health` for monitoring
 
-Storing important documents on personal laptops, USB drives, or email attachments can lead to **data loss, limited accessibility, and security risks**.
+## Architecture
 
-CloudVault addresses these challenges by providing a centralised storage system where users can securely upload, organise, download, and share files with controlled permissions.
-
-Inspired by platforms like **Google Drive** and **Dropbox**, CloudVault aims to deliver essential cloud storage capabilities through a simple, secure, and user-friendly interface.
-
-## 🎯 Objectives
-
-- **Reliable Storage:** Provide centralised cloud storage with anytime, anywhere file access.
-- **Authentication:** Ensure that only authenticated users can access their accounts and resources.
-- **Authorisation:** Implement controlled access to files through defined user permissions.
-- **Secure Sharing:** Enable safe file sharing through user-based access and secure links.
-- **Monitoring:** Track file activities, user actions, and overall system health.
-- **Organisation:** Make file management easier through folder-based organisation.
-
-## ✨ Key Features
-
-| Feature | Description |
-|---|---|
-| 🔐 User Authentication | Secure user sign-up and login. |
-| 📤 File Upload | Upload files to centralised cloud storage. |
-| 📥 File Download | Access and download stored files whenever needed. |
-| 🗑️ File Management | Delete files and manage stored content. |
-| 📁 Folder Organisation | Organise files into folders for easier navigation. |
-| 🔗 Secure Sharing | Share files with registered users or through secure links. |
-| 👁️ Access Permissions | Provide view-only or download permissions. |
-| 🚫 Access Revocation | Allow owners to revoke previously granted access. |
-| 📋 Activity Logs | Maintain records of file access and sharing activities. |
-| 📊 System Monitoring | Monitor storage usage, system health, and activity. |
-
-## 🔒 Security
-
-Security and access control are important components of CloudVault.
-
-- **Authentication:** Protect user accounts through a login system.
-- **Authorisation:** Restrict access to files based on ownership and permissions.
-- **Controlled Sharing:** Allow owners to decide who can access shared files.
-- **Permission Management:** Support view-only and download access.
-- **Revocable Access:** Give file owners control over previously shared resources.
-- **Activity Tracking:** Maintain logs of important user and file operations.
-
-## ⚙️ Application Workflow
-
-```mermaid
-flowchart TD
-    A([User Visits CloudVault]) --> B[Sign Up / Login]
-    B --> C{Authenticated?}
-    C -->|No| B
-    C -->|Yes| D[User Dashboard]
-    D --> E[Upload Files]
-    D --> F[Organise Folders]
-    D --> G[View Stored Files]
-    E --> H[Cloud Storage]
-    F --> H
-    G --> H
-    H --> I[Download / Delete]
-    H --> J[Share Files]
-    J --> K[Set Access Permissions]
-    K --> L[Generate Secure Link / Share With User]
-    L --> M[Recipient Accesses File]
-    M --> N[Activity Logs]
+```
+ Browser (HTML + JS)
+        |
+        v
+ EC2: Node.js + Express API  ----->  S3 (private, encrypted bucket)
+        |                              ^
+        |                              |  pre-signed URLs (60 s)
+        v
+ RDS: PostgreSQL (users, files, shares, logs)
 ```
 
-## 🛠️ Technology Stack
+| Component | Technology | AWS service |
+|---|---|---|
+| Frontend | Plain HTML, CSS and JavaScript served by the backend | n/a |
+| Backend / API | Node.js, Express | EC2 |
+| Object storage | Private bucket, SSE-S3 encryption, public access blocked | S3 |
+| Database | PostgreSQL | RDS |
+| Authentication and authorization | bcrypt, JWT, an access check on every file action | App code |
+| Server permissions | IAM role attached to the instance (no keys on the server) | IAM |
+| Logging | `logs` table plus JSON console logs | App code |
 
-The technology stack will be documented as the implementation evolves.
+## Project structure
 
-| Component | Technology |
-|---|---|
-| Frontend | To be updated |
-| Backend | To be updated |
-| Database | To be updated |
-| Cloud Storage | To be updated |
-| Authentication | To be updated |
-| Version Control | Git & GitHub |
-
-## 🚀 Getting Started
-
-Follow these steps to run CloudVault locally once the application setup is complete.
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/YOUR-USERNAME/CloudVault.git
+```
+CloudVault/
+├── server.js        # Express API: auth, files, sharing, logs, health
+├── schema.sql       # Database tables
+├── setup-db.js      # Creates the tables from schema.sql
+├── check.js         # Tests the database and S3 connections
+├── public/
+│   └── index.html   # Frontend
+├── package.json
+└── .env             # Local secrets (never committed)
 ```
 
-### 2. Navigate to the Project Directory
+## Database schema
+
+| Table | Purpose |
+|---|---|
+| `users` | id, email (unique), password_hash, created_at |
+| `files` | id, owner_id, name, folder, s3_key, size, created_at |
+| `shares` | id, file_id, user_id, token, can_download, revoked, created_at |
+| `logs` | id, user_id, action, detail, created_at |
+
+## API overview
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/signup` | No | Create an account |
+| POST | `/api/login` | No | Log in and receive a JWT |
+| GET | `/api/files` | Yes | List your files and files shared with you |
+| POST | `/api/files` | Yes | Upload a file (multipart form) |
+| GET | `/api/files/:id/download` | Yes | Get a 60-second pre-signed URL (owner or shared user) |
+| DELETE | `/api/files/:id` | Yes | Delete a file (owner only) |
+| POST | `/api/files/:id/share` | Yes | Share with a user (email) or create a secure link (owner only) |
+| POST | `/api/files/:id/revoke` | Yes | Revoke all shares of a file (owner only) |
+| GET | `/s/:token` | No | Open a file through a secure link |
+| GET | `/api/logs` | Yes | Your last 50 activity entries |
+| GET | `/health` | No | Health check |
+
+## Getting started (local)
+
+### Prerequisites
+
+- Node.js 18 or later
+- An AWS account with an S3 bucket and an RDS PostgreSQL instance
+- AWS CLI configured (`aws configure`) with access to the bucket
+
+### 1. Clone and install
 
 ```bash
+git clone https://github.com/bytewithpalak/CloudVault.git
 cd CloudVault
+npm install
 ```
 
-### 3. Install Dependencies
+### 2. Create a `.env` file
 
-Install the required frontend and backend dependencies according to their respective setup instructions.
+```
+PORT=3000
+DATABASE_URL=postgres://USER:PASSWORD@YOUR-RDS-ENDPOINT:5432/DBNAME
+AWS_REGION=ap-south-1
+S3_BUCKET=your-bucket-name
+JWT_SECRET=a-long-random-string
+```
 
-### 4. Configure Environment Variables
+Use only letters and numbers in the database password, or URL-encode special characters. The `.env` file is listed in `.gitignore` and must never be committed.
 
-Create a `.env` file and configure the required database, storage, and authentication credentials.
+### 3. Prepare the AWS resources
 
-### 5. Run the Application
+- **S3:** create a bucket with *Block all public access* on and default encryption (SSE-S3).
+- **RDS:** create a PostgreSQL instance and allow inbound TCP 5432 from your IP (or from your EC2 security group).
 
-Start the frontend and backend services using the project's configured commands.
+### 4. Create the tables and check connections
 
-> **Note:** Detailed installation and execution instructions will be added as development progresses.
+```bash
+node setup-db.js   # expect: tables created: users, files, shares, logs
+node check.js      # expect: DB OK and S3 OK
+```
 
-## 📸 Screenshots
+### 5. Run
 
-Screenshots of the CloudVault application, including the login page, dashboard, file manager, and sharing interface, will be added here.
+```bash
+node server.js
+```
 
-## 🔮 Future Enhancements
+Open `http://localhost:3000`.
 
-- **File Versioning:** Maintain and restore previous versions of files.
-- **Storage Quotas:** Set storage limits for individual users.
-- **File Preview:** Preview supported documents and images without downloading.
-- **Team Workspaces:** Enable collaborative file management.
-- **Advanced Search:** Search files using names, types, and metadata.
-- **Encryption:** Implement encryption for enhanced data protection.
-- **Notifications:** Notify users about shared files and access activity.
+## Deployment on AWS
 
-## 👥 Team
+1. **EC2:** launch an Amazon Linux 2023 instance (t3.micro). Open ports 22 and 3000 in its security group (80 and 443 if you use Nginx with HTTPS).
+2. **IAM role:** attach a role with S3 access to the instance so the server needs no access keys.
+3. **Database access:** change the RDS inbound rule so PostgreSQL (5432) is allowed only from the EC2 security group.
+4. **Install and run:**
+   ```bash
+   sudo dnf install -y nodejs git
+   git clone https://github.com/bytewithpalak/CloudVault.git
+   cd CloudVault
+   npm install
+   nano .env                      # paste your values
+   sudo npm install -g pm2
+   pm2 start server.js --name cloudvault
+   pm2 startup && pm2 save        # restart automatically after a reboot
+   ```
+5. **Stable address (optional):** attach an Elastic IP and point a DNS name at it.
+6. **HTTPS (optional):** put Nginx in front of the app and get a free Let's Encrypt certificate.
 
-**Developed by:**
+To update the app later:
 
-- **Sarthak Jagota**
-- **Palak Mahajan**
+```bash
+cd CloudVault && git pull && npm install && pm2 restart cloudvault
+```
 
-**Faculty Advisor:** Dr. Varinder Pal Singh
+## Security design
 
-## 🤝 Contributions
+- Passwords are hashed with bcrypt and never stored in plain text.
+- JWT authentication protects every file route.
+- Each file action checks that the user is the **owner** or has a **non-revoked share**; only owners can delete, share or revoke.
+- The S3 bucket blocks all public access. Downloads use pre-signed URLs that expire after 60 seconds.
+- Files are encrypted at rest (SSE-S3).
+- The EC2 server uses an **IAM role**, so no AWS keys are stored on it.
+- The database accepts connections only from the application server's security group once deployed.
+- Failed logins are logged.
 
-Contributions, suggestions, and feedback are welcome. Feel free to fork the repository and submit a pull request.
+## Limitations
 
-## 📄 License
+- Files are encrypted at rest, **not end-to-end**. The AWS account administrator can technically access stored files.
+- View-only is enforced by the link type and the browser. A determined user could still save what they can see; true DRM is out of scope.
+- Basic JWT authentication with no rate limiting or password-reset flow.
+- Uploads are limited to 20 MB and are buffered in server memory.
+- HTTPS is available only if you set up Nginx with a certificate; the base deployment serves plain HTTP on port 3000.
+- This is a student project. Do not upload sensitive or private files.
 
-This project is currently developed for academic purposes. Licensing details will be added in the future.
+## Future work
 
----
+- End-to-end (client-side) encryption
+- Amazon Cognito for authentication
+- HTTPS with a load balancer or Nginx by default
+- Rate limiting and account lockout
+- S3 versioning and large-file multipart uploads
+- CloudWatch dashboards and alarms for system metrics
+- Expiry dates for share links
 
-<p align="center">
-  **CloudVault — Your Files. Your Access. Your Control.**
-</p>
