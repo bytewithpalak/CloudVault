@@ -1,10 +1,13 @@
 {
   "name": "cloudvault",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Secure cloud-based file storage and sharing platform",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "setup-db": "node setup-db.js",
+    "check": "node check.js",
+    "test": "node --test"
   },
   "repository": {
     "type": "git",
@@ -27,5 +30,8 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.5.0",
     "pg": "^8.23.1"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
